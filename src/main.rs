@@ -1,12 +1,7 @@
-use rayon::prelude::*;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Result;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Instant;
-use walkdir::DirEntry;
 use walkdir::WalkDir;
 
 fn main() -> Result<()> {
