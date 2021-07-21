@@ -1,22 +1,20 @@
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::Result;
-use std::time::Instant;
-use walkdir::WalkDir;
+use std::{io::Write, path::PathBuf};
 
-fn main() -> Result<()> {
-    let now = Instant::now();
+use jwalk::WalkDir;
+fn main() -> std::io::Result<()> {
+    let now = std::time::Instant::now();
+    let mut buffer = std::fs::File::create("files.db")?;
+    let mut new_line: PathBuf = PathBuf::new();
+    new_line.push("\n");
+    let path: PathBuf = [r"D:\"].iter().collect();
 
-    let mut file = File::create("files.db")?;
-
-    for entry in WalkDir::new("../../").into_iter().filter_map(|e| e.ok()) {
-        let temp = entry.file_name().to_string_lossy() + "\n";
-        file.write_all(temp.as_bytes())?;
+    for entry in WalkDir::new(path).sort(true) {
+        let mut temp = entry?.path();
+        temp.push(&new_line);
+        buffer.write_all(&temp.to_string_lossy().as_bytes())?;
+        // println!("{}", entry?.path().display());
     }
 
-    //wait for all threads to finish
-
     println!("{}", now.elapsed().as_millis());
-
     Ok(())
 }
