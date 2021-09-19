@@ -1,70 +1,58 @@
-#![allow(unused_imports)]
-use jwalk::{DirEntry, WalkDir, WalkDirGeneric};
-use std::cmp::Ordering;
-use std::ffi::{OsStr, OsString};
-use std::fs;
-use std::io::{BufWriter, Write};
-use std::path::PathBuf;
-use sysinfo::{DiskExt, SystemExt};
+use std::{
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader},
+    path::Path,
+    time::Instant,
+};
 
-fn main() -> std::io::Result<()> {
-    let now = std::time::Instant::now();
-    //Get Disks
-    let mut disks: Vec<&str> = Vec::new();
-    let system = sysinfo::System::new_all();
+use jwalk::WalkDir;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use std::io::Write;
+use text_io::read;
 
-    for disk in system.disks() {
-        disks.push(disk.mount_point().to_str().unwrap());
+fn create_db() {
+    let cdrive = Path::new("C:/");
+
+    File::create("files.db").unwrap();
+
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open("files.db")
+        .unwrap();
+
+    for entry in WalkDir::new(cdrive).sort(true).skip_hidden(false) {
+        // let de = entry.as_ref().unwrap();
+        // let owned = de.file_name().to_owned();
+        // let string = owned.to_string_lossy();
+
+        if let Err(e) = writeln!(file, "{}", entry.as_ref().unwrap().path().to_string_lossy()) {
+            eprintln!("Couldn't write to file: {}", e);
+        }
     }
-    // let walk_dir = WalkDirGeneric::<((usize), (bool))>::new(r"C:\tools").process_read_dir(
-    //     |depth, path, read_dir_state, children| {
-    //         // 2. Custom filter
-    //         children.retain(|dir_entry_result| {
-    //             dir_entry_result
-    //                 .as_ref()
-    //                 .map(|dir_entry| {
-    //                     dir_entry
-    //                         .file_name
-    //                         .to_str()
-    //                         .map(|s| s.starts_with('.'))
-    //                         .unwrap_or(false)
-    //                 })
-    //                 .unwrap_or(false)
-    //         });
-    //     },
-    // );
+}
+fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
+    let file = File::open(filename).expect("no such file");
+    let buf = BufReader::new(file);
+    buf.lines()
+        .map(|l| l.expect("Could not parse line"))
+        .collect()
+}
+fn main() {
+    create_db();
+    println!("Input search:");
+    let input: String = read!();
 
-    let path: PathBuf = [disks[0]].iter().collect();
-    let drive = WalkDir::new(&path).sort(true);
+    let now = Instant::now();
+    //this needs to be sped up
+    let data = lines_from_file("files.db");
 
-    for entry in drive {
-        // dbg!(entry)?;
-    }
+    //it's not that fast but it's okay
+    data.par_iter().for_each(|file| {
+        if file.contains(&input) {
+            println!("{}", file);
+        }
+    });
 
-    //Don't write to file
-    //Store drive in memory
-    //Get user input that searches the memory
-
-    println!("{}", now.elapsed().as_millis());
-
-    /*
-    //todo get first character from disks[0]
-    let db_name: &str = disks[0];
-    let file = fs::File::create(db_name)?;
-    let mut file = BufWriter::new(file);
-    let mut files: Vec<OsString> = vec![OsString::new()];
-
-    // This is faster than putting the file writes
-    // where the vector push is
-    for entry in drive {
-        files.push(entry?.file_name);
-    }
-
-    for f in files {
-        file.write_all(f.to_string_lossy().as_bytes())?;
-        file.write_all("\n".as_bytes())?;
-    }
-    */
-
-    Ok(())
+    println!("Elapsed {:?}", &now.elapsed());
 }
