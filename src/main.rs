@@ -1,7 +1,7 @@
 use std::{
     fs::{File, OpenOptions},
-    io::{BufRead, BufReader},
-    path::Path,
+    io::{BufRead, BufReader, Bytes},
+    path::{Path, PathBuf},
     time::Instant,
 };
 
@@ -13,22 +13,17 @@ use text_io::read;
 fn create_db() {
     let cdrive = Path::new("C:/");
 
-    File::create("files.db").unwrap();
+    let mut buffer = File::create("files.db").unwrap();
 
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open("files.db")
-        .unwrap();
+    let new_line = PathBuf::from("\n");
 
     for entry in WalkDir::new(cdrive).sort(true).skip_hidden(false) {
-        // let de = entry.as_ref().unwrap();
-        // let owned = de.file_name().to_owned();
-        // let string = owned.to_string_lossy();
+        let mut temp = entry.unwrap().path();
+        temp.push(&new_line);
 
-        if let Err(e) = writeln!(file, "{}", entry.as_ref().unwrap().path().to_string_lossy()) {
-            eprintln!("Couldn't write to file: {}", e);
-        }
+        buffer
+            .write_all(&temp.to_string_lossy().as_bytes())
+            .unwrap();
     }
 }
 fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
@@ -39,7 +34,10 @@ fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
         .collect()
 }
 fn main() {
-    create_db();
+    // let now = Instant::now();
+    // create_db();
+    // println!("Elapsed {:?}", &now.elapsed());
+
     println!("Input search:");
     let input: String = read!();
 
