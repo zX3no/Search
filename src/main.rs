@@ -6,6 +6,7 @@ use std::{
 };
 
 use jwalk::WalkDir;
+use memmap2::MmapOptions;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::io::Write;
 use text_io::read;
@@ -26,13 +27,7 @@ fn create_db() {
             .unwrap();
     }
 }
-fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
-    let file = File::open(filename).expect("no such file");
-    let buf = BufReader::new(file);
-    buf.lines()
-        .map(|l| l.expect("Could not parse line"))
-        .collect()
-}
+
 fn main() {
     // let now = Instant::now();
     // create_db();
@@ -41,16 +36,16 @@ fn main() {
     println!("Input search:");
     let input: String = read!();
 
-    let now = Instant::now();
     //this needs to be sped up
-    let data = lines_from_file("files.db");
+    let now = Instant::now();
 
-    //it's not that fast but it's okay
-    data.par_iter().for_each(|file| {
-        if file.contains(&input) {
-            println!("{}", file);
+    let file = File::open("files.db").expect("no such file");
+    let buf = BufReader::new(file);
+    for file in buf.lines() {
+        let f = file.unwrap().clone();
+        if f.contains(&input) {
+            println!("{}", f);
         }
-    });
-
+    }
     println!("Elapsed {:?}", &now.elapsed());
 }
