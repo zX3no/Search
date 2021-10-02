@@ -1,51 +1,89 @@
 use std::{
-    fs::{File, OpenOptions},
-    io::{BufRead, BufReader, Bytes},
-    path::{Path, PathBuf},
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
     time::Instant,
 };
 
-use jwalk::WalkDir;
-use memmap2::MmapOptions;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use jwalk::{DirEntry, WalkDir};
 use std::io::Write;
 use text_io::read;
 
-fn create_db() {
-    let cdrive = Path::new("C:/");
+fn create_db(drive: &str) {
+    let drive = Path::new(drive);
 
-    let mut buffer = File::create("files.db").unwrap();
+    let db_name: String = drive.to_str().unwrap()[..1].to_string() + ".db";
 
-    let new_line = PathBuf::from("\n");
+    let mut buffer = File::create(Path::new(db_name.as_str())).unwrap();
 
-    for entry in WalkDir::new(cdrive).sort(true).skip_hidden(false) {
-        let mut temp = entry.unwrap().path();
-        temp.push(&new_line);
+    let newline: &[u8] = &['\n' as u8];
 
+    let mut path_name = String::new();
+    let mut file_size: u64 = 0;
+    let mut e: DirEntry<((), ())>;
+
+    for entry in WalkDir::new(drive).sort(true).skip_hidden(false) {
         buffer
-            .write_all(&temp.to_string_lossy().as_bytes())
+            .write_all(
+                &[
+                    entry.as_ref().unwrap().path().to_string_lossy().as_bytes(),
+                    newline,
+                ]
+                .concat(),
+            )
             .unwrap();
+    }
+
+    return;
+
+    // for entry in WalkDir::new(drive).sort(true).skip_hidden(false) {
+    //     let now = Instant::now();
+    //     e = entry.unwrap();
+
+    //     path_name = e.path().to_str().unwrap().to_string();
+
+    //     file_size = match e.metadata() {
+    //         Ok(metadata) => metadata.file_size(),
+    //         Err(_) => 0,
+    //     };
+
+    //     buffer
+    //         .write_all(
+    //             &[
+    //                 path_name.as_bytes(),
+    //                 newline,
+    //                 &file_size.to_le_bytes(),
+    //                 newline,
+    //             ]
+    //             .concat(),
+    //         )
+    //         .unwrap();
+
+    //     println!("Loop {:?}", &now.elapsed());
+    // }
+}
+fn read_file(file_name: &str, input: &String) {
+    let file = File::open(file_name).expect("no such file");
+    let buf = BufReader::new(file);
+    for line in buf.lines() {
+        if line.as_ref().unwrap().contains(input) {
+            println!("{}", line.as_ref().unwrap());
+        }
     }
 }
 
 fn main() {
-    // let now = Instant::now();
-    // create_db();
-    // println!("Elapsed {:?}", &now.elapsed());
+    let now = Instant::now();
+    // create_db(r"C:\");
+    // create_db(r"D:\");
+    println!("Elapsed {:?}", &now.elapsed());
 
     println!("Input search:");
     let input: String = read!();
 
-    //this needs to be sped up
     let now = Instant::now();
-
-    let file = File::open("files.db").expect("no such file");
-    let buf = BufReader::new(file);
-    for file in buf.lines() {
-        let f = file.unwrap().clone();
-        if f.contains(&input) {
-            println!("{}", f);
-        }
-    }
+    read_file("C.db", &input);
+    read_file("D.db", &input);
+    println!("Input was: {}", &input);
     println!("Elapsed {:?}", &now.elapsed());
 }
