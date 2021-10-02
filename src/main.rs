@@ -5,9 +5,14 @@ use std::{
     time::Instant,
 };
 
+use app::TemplateApp;
+use eframe::NativeOptions;
 use jwalk::{DirEntry, WalkDir};
 use std::io::Write;
 use text_io::read;
+
+mod app;
+mod search;
 
 fn create_db(drive: &str) {
     let drive = Path::new(drive);
@@ -62,28 +67,34 @@ fn create_db(drive: &str) {
     //     println!("Loop {:?}", &now.elapsed());
     // }
 }
-fn read_file(file_name: &str, input: &String) {
-    let file = File::open(file_name).expect("no such file");
-    let buf = BufReader::new(file);
-    for line in buf.lines() {
-        if line.as_ref().unwrap().contains(input) {
-            println!("{}", line.as_ref().unwrap());
-        }
-    }
-}
+// fn read_file(file_name: &str, input: &String) {
+//     let file = File::open(file_name).expect("no such file");
+//     let buf = BufReader::new(file);
+//     for line in buf.lines() {
+//         if line.as_ref().unwrap().contains(input) {
+//             println!("{}", line.as_ref().unwrap());
+//         }
+//     }
+// }
+// fn search() {
+//     let now = Instant::now();
+//     // create_db(r"C:\");
+//     // create_db(r"D:\");
+//     println!("Elapsed {:?}", &now.elapsed());
+
+//     println!("Input search:");
+//     let mut input: String = read!("{}\n");
+//     //there is a weird "\r" character at the end?
+//     input.pop();
+
+//     let now = Instant::now();
+//     read_file("C.db", &input);
+//     read_file("D.db", &input);
+//     println!("Input was: {}", &input);
+//     println!("Elapsed {:?}", &now.elapsed());
+// }
 
 fn main() {
-    let now = Instant::now();
-    // create_db(r"C:\");
-    // create_db(r"D:\");
-    println!("Elapsed {:?}", &now.elapsed());
-
-    println!("Input search:");
-    let input: String = read!();
-
-    let now = Instant::now();
-    read_file("C.db", &input);
-    read_file("D.db", &input);
-    println!("Input was: {}", &input);
-    println!("Elapsed {:?}", &now.elapsed());
+    let app = TemplateApp::default();
+    eframe::run_native(Box::new(app), NativeOptions::default());
 }
