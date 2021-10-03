@@ -4,13 +4,16 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, channel, Receiver, SyncSender};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use eframe::egui::{color::*, *};
 use eframe::{egui, epi};
 use jwalk::WalkDir;
+use rayon::iter::{
+    IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 
 pub struct App {
     //async drive scan
@@ -18,10 +21,12 @@ pub struct App {
     result: Option<VecDeque<PathBuf>>,
     trigger_fetch: bool,
     //search
-    search_in_progress: Option<Receiver<VecDeque<String>>>,
+    search_in_progress: Option<Receiver<VecDeque<PathBuf>>>,
     search: String,
     last_search: String,
-    search_result: VecDeque<String>,
+    search_result: VecDeque<PathBuf>,
+    //benchmarks
+    now: Instant,
 }
 
 impl Default for App {
@@ -35,6 +40,7 @@ impl Default for App {
             search: String::new(),
             last_search: String::from(" "),
             search_result: Default::default(),
+            now: Instant::now(),
         }
     }
 }
@@ -50,17 +56,27 @@ impl App {
                 out.push_back(f.path())
             };
         }
+        for file in WalkDir::new(Path::new(r"D:\"))
+            .sort(true)
+            .skip_hidden(false)
+        {
+            if let Ok(f) = file {
+                out.push_back(f.path())
+            };
+        }
         return out;
     }
-    pub fn search_files(files: VecDeque<PathBuf>, s: String) -> VecDeque<String> {
-        let mut to_send = VecDeque::new();
-        for file in files {
-            let f = file.to_string_lossy();
-            if f.contains(&s) || s == "" {
-                to_send.push_back(f.to_string());
-            }
-        }
-        return to_send;
+    pub fn search_files(files: VecDeque<PathBuf>, s: String) -> VecDeque<PathBuf> {
+        let out: VecDeque<_> = files
+            .par_iter()
+            .filter_map(|f| {
+                if f.to_string_lossy().contains(&s) {
+                    return Some(f.clone());
+                }
+                return None;
+            })
+            .collect();
+        return out;
     }
 }
 impl epi::App for App {
@@ -85,6 +101,7 @@ impl epi::App for App {
             search,
             last_search,
             search_result,
+            now,
         } = self;
         if let Some(receiver) = in_progress {
             // Are we there yet?
@@ -108,15 +125,25 @@ impl epi::App for App {
         if let Some(receiver) = search_in_progress {
             // Are we there yet?
             if let Ok(r) = receiver.try_recv() {
-                println!("done searching");
+                println!(
+                    "done searching, {} items, took {:?}",
+                    r.len(),
+                    now.elapsed()
+                );
+
                 *search_in_progress = None;
                 *search_result = r;
             }
         }
 
         if search != last_search && result.is_some() {
+            self.now = Instant::now();
+            //TODO if the current search is longer than the last search
+            //it should not delete the last search_result.
+            //instead it should search through that.
             println!("searching");
             let (sender, receiver) = std::sync::mpsc::channel();
+
             //add the receiver
             *search_in_progress = Some(receiver);
             //wipe the last search
@@ -125,6 +152,7 @@ impl epi::App for App {
             *last_search = search.clone();
 
             let r = result.clone();
+            // let r = result.clone();
             let s = search.clone();
 
             thread::spawn(move || {
@@ -158,7 +186,13 @@ impl epi::App for App {
                     ui.label("Please wait...");
                 } else {
                     for row in row_range {
-                        ui.label(search_result.get(row).unwrap());
+                        ui.label(
+                            search_result
+                                .get(row)
+                                .unwrap()
+                                .to_string_lossy()
+                                .to_string(),
+                        );
                     }
                 }
             });

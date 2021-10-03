@@ -12,6 +12,7 @@ text_io = "0.1.9"
 eframe = "0.14.0" # Gives us egui, epi and web+native backends
 serde = { version = "1", features = ["derive"], optional = true }
 fuzzy-matcher = "0.3.7"
+rayon = "1.5.1"
 
 [features]
 default = []
