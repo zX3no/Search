@@ -1,18 +1,20 @@
 use std::{
-    fs::File,
+    ffi::OsStr,
+    fs::{File, Metadata},
     io::{BufRead, BufReader},
+    os::windows::prelude::MetadataExt,
     path::Path,
     time::Instant,
 };
 
 use app::TemplateApp;
 use eframe::NativeOptions;
-use jwalk::{DirEntry, WalkDir};
+use jwalk::{DirEntry, Error, Parallelism, WalkDir, WalkDirGeneric};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::io::Write;
 use text_io::read;
 
 mod app;
-mod search;
 
 fn create_db(drive: &str) {
     let drive = Path::new(drive);
@@ -97,4 +99,49 @@ fn create_db(drive: &str) {
 fn main() {
     let app = TemplateApp::default();
     eframe::run_native(Box::new(app), NativeOptions::default());
+
+    // let path = Path::new(r"C:/");
+
+    // let now = Instant::now();
+    // let mut file_name = Box::new("");
+    // for file in WalkDir::new(path) {
+    //     if let Ok(f) = file {
+    //         file_name = Box::new(f.file_name().to_str().unwrap());
+    //     };
+    // }
+    // println!("Elapsed {:?}", &now.elapsed());
+
+    //jwalk does not store data this way it's more like a tree
+    //C:/
+    //  C:/Windows
+    //Win depends on it's root so you can't remove it
+
+    // for entry in WalkDirGeneric::<((bool), (bool))>::new(path)
+    //     .skip_hidden(false)
+    //     //depth, root path, state of root(skip?), the child dir
+    //     .process_read_dir(move |_depth, root, _state, child| {
+    //         child.iter_mut().for_each(|path_result| {
+    //             if let Ok(path) = path_result {
+    //                 if path.path().parent().unwrap_or(Path::new("")) == root {
+    //                     path.client_state = true;
+    //                 }
+    //             }
+    //         });
+    //         child.retain(move |path_result| {
+    //             if let Ok(path) = path_result {
+    //                 if path.path().parent().unwrap_or(Path::new("")) == root {
+    //                     return true;
+    //                 }
+    //                 if path.file_name().to_string_lossy().contains(".mp3") {
+    //                     return true;
+    //                 }
+    //             }
+    //             return false;
+    //         });
+    //     })
+    // {
+    //     if !entry.as_ref().unwrap().path().is_dir() {
+    //         println!("{}", entry.unwrap().path().display());
+    //     }
+    // }
 }

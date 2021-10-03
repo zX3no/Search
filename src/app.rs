@@ -1,14 +1,13 @@
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 use std::sync::mpsc::channel;
 use std::thread;
 
 use eframe::egui::{color::*, *};
 use eframe::{egui, epi};
-use rayon::iter::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
-
-use crate::search::search;
+use jwalk::WalkDir;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
@@ -18,6 +17,7 @@ pub struct TemplateApp {
     search: String,
     last_search: String,
     files: VecDeque<String>,
+    file_name: VecDeque<Box<String>>,
 }
 
 impl Default for TemplateApp {
@@ -27,6 +27,7 @@ impl Default for TemplateApp {
             search: String::from("among us"),
             last_search: String::new(),
             files: VecDeque::new(),
+            file_name: VecDeque::new(),
         }
     }
 }
@@ -43,6 +44,12 @@ impl epi::App for TemplateApp {
         _frame: &mut epi::Frame<'_>,
         _storage: Option<&dyn epi::Storage>,
     ) {
+        for file in WalkDir::new(Path::new(r"C:\")) {
+            if let Ok(f) = file {
+                self.file_name
+                    .push_back(Box::new(f.file_name().to_string_lossy().to_string()));
+            };
+        }
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -58,6 +65,7 @@ impl epi::App for TemplateApp {
                 });
             });
         });
+
         if self.search != self.last_search {
             self.files = VecDeque::new();
             let (send, recv) = channel();
@@ -91,7 +99,6 @@ impl epi::App for TemplateApp {
 
             ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
                 for row in row_range {
-                    println!("printing{}", row);
                     ui.label(self.files.get(row).unwrap());
                 }
             });
