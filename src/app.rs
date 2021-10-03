@@ -1,13 +1,19 @@
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use eframe::egui::{color::*, *};
 use eframe::{egui, epi};
+use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
 use jwalk::WalkDir;
+use rayon::iter::{
+    IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[cfg_attr(feature = "persistence", derive(serde::Deserialize, serde::Serialize))]
@@ -17,17 +23,17 @@ pub struct TemplateApp {
     search: String,
     last_search: String,
     files: VecDeque<String>,
-    file_name: VecDeque<Box<String>>,
+    drive: VecDeque<Box<PathBuf>>,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            search: String::from("among us"),
+            search: String::new(),
             last_search: String::new(),
             files: VecDeque::new(),
-            file_name: VecDeque::new(),
+            drive: VecDeque::new(),
         }
     }
 }
@@ -44,19 +50,10 @@ impl epi::App for TemplateApp {
         _frame: &mut epi::Frame<'_>,
         _storage: Option<&dyn epi::Storage>,
     ) {
-        for file in WalkDir::new(Path::new(r"C:\")) {
-            if let Ok(f) = file {
-                self.file_name
-                    .push_back(Box::new(f.file_name().to_string_lossy().to_string()));
-            };
-        }
     }
 
-    /// Called each time the UI needs repainting, which may be many times per second.
-    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
             egui::menu::bar(ui, |ui| {
                 egui::menu::menu(ui, "File", |ui| {
                     if ui.button("Quit").clicked() {
@@ -66,25 +63,40 @@ impl epi::App for TemplateApp {
             });
         });
 
+        if self.drive.is_empty() {
+            println!("scaning drive");
+            for file in WalkDir::new(Path::new(r"C:\")) {
+                if let Ok(f) = file {
+                    self.drive.push_back(Box::new(f.path()))
+                };
+            }
+        }
+
         if self.search != self.last_search {
+            println!("starting search");
             self.files = VecDeque::new();
-            let (send, recv) = channel();
             self.last_search = self.search.clone();
-            let search = self.search.clone();
-            thread::spawn(move || {
-                let file = File::open("C.db").expect("no such file");
-                let buf = BufReader::new(file);
-                for line in buf.lines() {
-                    if line.as_ref().unwrap().contains(&search) {
-                        if let Err(e) = send.send(line.unwrap().to_string()) {
-                            println!("{}", e);
-                        }
+
+            let matcher = SkimMatcherV2::default();
+            for file in &self.drive {
+                if let Some(score) = matcher.fuzzy_match(file.to_str().unwrap(), &self.search) {
+                    if score > 50 {
+                        //TODO crossbeam sort
+                        self.files.push_back(file.to_string_lossy().to_string());
                     }
                 }
-            });
-            for r in recv.iter() {
-                self.files.push_back(r);
             }
+
+            println!("done search");
+            // let file = File::open("C.db").expect("no such file");
+            // let buf = BufReader::new(file);
+            // for line in buf.lines() {
+            //     if line.as_ref().unwrap().contains(&search) {
+            //         if let Err(e) = send.send(line.unwrap().to_string()) {
+            //             println!("{}", e);
+            //         }
+            //     }
+            // }
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -98,9 +110,19 @@ impl epi::App for TemplateApp {
             let num_rows = self.files.len();
 
             ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
+                // let safe_ui = Arc::new(Mutex::new(ui));
+                // let matcher = SkimMatcherV2::default();
                 for row in row_range {
                     ui.label(self.files.get(row).unwrap());
                 }
+                // self.files.par_iter().for_each(|file| {});
+                // let iter = self.file_name.par_iter().for_each(|path| {
+                //     if let Some(hit) = matcher.fuzzy_match(path, "among us") {
+                //         if hit > 100 {
+                //             let data = *path.clone();
+                //             safe_ui.lock().unwrap().label(data);
+                //         }
+                //     };
             });
         });
     }
