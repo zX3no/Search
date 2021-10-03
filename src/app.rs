@@ -1,42 +1,46 @@
 use std::collections::VecDeque;
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{self, channel};
+use std::sync::mpsc::{self, channel, Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use eframe::egui::{color::*, *};
 use eframe::{egui, epi};
-use fuzzy_matcher::skim::SkimMatcherV2;
-use fuzzy_matcher::FuzzyMatcher;
 use jwalk::WalkDir;
-use rayon::iter::{
-    IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
-};
 
-pub struct TemplateApp {
-    // Example stuff:
+pub struct App {
+    //async drive scan
+    in_progress: Option<Receiver<VecDeque<PathBuf>>>,
+    result: Option<VecDeque<PathBuf>>,
+    trigger_fetch: bool,
+    //search
     search: String,
     last_search: String,
-    files: VecDeque<String>,
-    drive: VecDeque<PathBuf>,
+    search_result: VecDeque<String>,
 }
-
-impl Default for TemplateApp {
-    fn default() -> Self {
-        Self {
-            // Example stuff:
-            search: String::new(),
-            last_search: String::from(" "),
-            files: VecDeque::new(),
-            drive: VecDeque::new(),
+impl App {
+    pub fn scan_drive() -> VecDeque<PathBuf> {
+        let mut out = VecDeque::new();
+        for file in WalkDir::new(Path::new(r"C:\"))
+            .sort(true)
+            .skip_hidden(false)
+        {
+            if let Ok(f) = file {
+                out.push_back(f.path())
+            };
         }
+        return out;
     }
 }
-
-impl epi::App for TemplateApp {
+fn test() -> usize {
+    thread::sleep(Duration::from_secs(1));
+    return 5;
+}
+impl epi::App for App {
     fn name(&self) -> &str {
         "Search!"
     }
@@ -50,25 +54,30 @@ impl epi::App for TemplateApp {
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        if self.drive.is_empty() {
-            let (tx, rx) = mpsc::channel();
-            println!("created channel");
+        let Self {
+            in_progress,
+            result,
+            trigger_fetch,
+            search,
+            last_search,
+            search_result,
+        } = self;
+        if let Some(receiver) = in_progress {
+            // Are we there yet?
+            if let Ok(r) = receiver.try_recv() {
+                *in_progress = None;
+                *result = Some(r);
+            }
+        }
 
+        if *trigger_fetch {
+            *trigger_fetch = false;
+            let (sender, receiver) = std::sync::mpsc::channel();
+            *in_progress = Some(receiver);
             thread::spawn(move || {
-                println!("scaning drive");
-                let mut data = VecDeque::new();
-                for file in WalkDir::new(Path::new(r"C:\"))
-                    .sort(true)
-                    .skip_hidden(false)
-                {
-                    if let Ok(f) = file {
-                        data.push_back(f.path())
-                    };
-                }
-                tx.send(data).unwrap();
+                println!("waiting");
+                sender.send(App::scan_drive()).ok();
             });
-            println!("checking");
-            self.drive = rx.recv().unwrap();
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -81,15 +90,15 @@ impl epi::App for TemplateApp {
             });
         });
 
-        if self.search != self.last_search {
+        if search != last_search && result.is_some() {
             println!("starting search");
-            self.files = VecDeque::new();
-            self.last_search = self.search.clone();
+            *search_result = VecDeque::new();
+            *last_search = search.clone();
 
-            for file in &self.drive {
+            for file in result.as_ref().unwrap() {
                 let data = file.to_string_lossy();
-                if data.contains(&self.search) || self.search == "" {
-                    self.files.push_back(data.to_string());
+                if data.contains(&*search) || search == "" {
+                    search_result.push_back(data.to_string());
                 }
             }
 
@@ -98,20 +107,38 @@ impl epi::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             //TODO make this bigger
-            ui.text_edit_singleline(&mut self.search);
+            ui.text_edit_singleline(search);
 
             egui::warn_if_debug_build(ui);
 
             ui.add_space(4.0);
 
             let row_height = ui.fonts()[TextStyle::Body].row_height();
-            let num_rows = self.files.len();
+            let num_rows = search_result.len();
 
             ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
-                for row in row_range {
-                    ui.label(self.files.get(row).unwrap());
+                if result.is_none() {
+                    ui.label("Please wait...");
+                } else {
+                    for row in row_range {
+                        ui.label(search_result.get(row).unwrap());
+                    }
                 }
             });
         });
+    }
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            // Example stuff:
+            in_progress: Default::default(),
+            result: Default::default(),
+            trigger_fetch: true,
+            search: String::new(),
+            last_search: String::from(" "),
+            search_result: Default::default(),
+        }
     }
 }
