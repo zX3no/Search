@@ -18,10 +18,27 @@ pub struct App {
     result: Option<VecDeque<PathBuf>>,
     trigger_fetch: bool,
     //search
+    search_in_progress: Option<Receiver<VecDeque<String>>>,
     search: String,
     last_search: String,
     search_result: VecDeque<String>,
 }
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            // Example stuff:
+            in_progress: Default::default(),
+            result: Default::default(),
+            trigger_fetch: true,
+            search_in_progress: Default::default(),
+            search: String::new(),
+            last_search: String::from(" "),
+            search_result: Default::default(),
+        }
+    }
+}
+
 impl App {
     pub fn scan_drive() -> VecDeque<PathBuf> {
         let mut out = VecDeque::new();
@@ -35,10 +52,16 @@ impl App {
         }
         return out;
     }
-}
-fn test() -> usize {
-    thread::sleep(Duration::from_secs(1));
-    return 5;
+    pub fn search_files(files: VecDeque<PathBuf>, s: String) -> VecDeque<String> {
+        let mut to_send = VecDeque::new();
+        for file in files {
+            let f = file.to_string_lossy();
+            if f.contains(&s) || s == "" {
+                to_send.push_back(f.to_string());
+            }
+        }
+        return to_send;
+    }
 }
 impl epi::App for App {
     fn name(&self) -> &str {
@@ -58,6 +81,7 @@ impl epi::App for App {
             in_progress,
             result,
             trigger_fetch,
+            search_in_progress,
             search,
             last_search,
             search_result,
@@ -65,18 +89,46 @@ impl epi::App for App {
         if let Some(receiver) = in_progress {
             // Are we there yet?
             if let Ok(r) = receiver.try_recv() {
+                println!("done scanning");
                 *in_progress = None;
                 *result = Some(r);
             }
         }
 
         if *trigger_fetch {
+            println!("scanning");
             *trigger_fetch = false;
             let (sender, receiver) = std::sync::mpsc::channel();
             *in_progress = Some(receiver);
             thread::spawn(move || {
-                println!("waiting");
                 sender.send(App::scan_drive()).ok();
+            });
+        }
+
+        if let Some(receiver) = search_in_progress {
+            // Are we there yet?
+            if let Ok(r) = receiver.try_recv() {
+                println!("done searching");
+                *search_in_progress = None;
+                *search_result = r;
+            }
+        }
+
+        if search != last_search && result.is_some() {
+            println!("searching");
+            let (sender, receiver) = std::sync::mpsc::channel();
+            //add the receiver
+            *search_in_progress = Some(receiver);
+            //wipe the last search
+            *search_result = VecDeque::new();
+            //update the last search
+            *last_search = search.clone();
+
+            let r = result.clone();
+            let s = search.clone();
+
+            thread::spawn(move || {
+                sender.send(App::search_files(r.unwrap(), s)).ok();
             });
         }
 
@@ -89,21 +141,6 @@ impl epi::App for App {
                 });
             });
         });
-
-        if search != last_search && result.is_some() {
-            println!("starting search");
-            *search_result = VecDeque::new();
-            *last_search = search.clone();
-
-            for file in result.as_ref().unwrap() {
-                let data = file.to_string_lossy();
-                if data.contains(&*search) || search == "" {
-                    search_result.push_back(data.to_string());
-                }
-            }
-
-            println!("done search");
-        }
 
         egui::CentralPanel::default().show(ctx, |ui| {
             //TODO make this bigger
@@ -126,19 +163,5 @@ impl epi::App for App {
                 }
             });
         });
-    }
-}
-
-impl Default for App {
-    fn default() -> Self {
-        Self {
-            // Example stuff:
-            in_progress: Default::default(),
-            result: Default::default(),
-            trigger_fetch: true,
-            search: String::new(),
-            last_search: String::from(" "),
-            search_result: Default::default(),
-        }
     }
 }
