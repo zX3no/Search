@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 use std::collections::VecDeque;
+use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::Receiver;
 use std::thread::{self};
@@ -11,13 +12,14 @@ use eframe::{egui, epi};
 use jwalk::WalkDir;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+use crate::index::{self, Index};
 use crate::indexer::Indexer;
 
 pub struct App {
     search_query: String,
     last_search: String,
     search_result: VecDeque<String>,
-    index: Indexer,
+    indexer: Indexer,
 }
 
 impl Default for App {
@@ -27,7 +29,7 @@ impl Default for App {
             search_query: String::new(),
             last_search: String::from(" "),
             search_result: Default::default(),
-            index: Indexer::new(),
+            indexer: Indexer::new(),
         }
     }
 }
@@ -44,11 +46,11 @@ impl epi::App for App {
         _frame: &mut epi::Frame<'_>,
         _storage: Option<&dyn epi::Storage>,
     ) {
-        if self.index.is_empty() {
-            thread::spawn(|| {
-                Indexer::create();
-            });
-        }
+        // if self.index.is_empty() {
+        //     thread::spawn(|| {
+        //         Indexer::create();
+        //     });
+        // }
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
@@ -56,17 +58,17 @@ impl epi::App for App {
             search_query,
             last_search,
             search_result,
-            index,
+            indexer,
         } = self;
 
-        if search_query != last_search && !index.is_empty() {
+        if search_query != last_search && !indexer.is_empty() {
             //update the last search
             *last_search = search_query.clone();
 
-            *search_result = index.search(search_query);
+            *search_result = indexer.search(search_query);
         }
 
-        if index.is_empty() {
+        if indexer.is_empty() {
             // index.update();
         }
 
@@ -82,8 +84,7 @@ impl epi::App for App {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.add_sized(
-                //the height does not matter
-                Vec2::new(ui.available_width(), 0.0),
+                [ui.available_width(), 0.0],
                 egui::TextEdit::singleline(search_query),
             );
 
@@ -91,20 +92,37 @@ impl epi::App for App {
 
             ui.add_space(10.0);
 
+            if let Some(index) = &indexer.index {
+                let row_height = ui.fonts()[TextStyle::Body].row_height();
+                //todo remove this
+                let vec_queue: VecDeque<&Index> = VecDeque::from_iter(index);
+                let num_rows = vec_queue.len();
+
+                ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
+                    egui::Grid::new("some_unique_id").show(ui, |ui| {
+                        for row in row_range {
+                            let file = vec_queue.get(row).unwrap();
+                            ui.label(file.file_name.clone());
+                            ui.label(file.path.clone());
+                            ui.end_row();
+                        }
+                    });
+                });
+            }
             //broken
             // ui.style_mut().spacing.scroll_bar_width = 13.0;
-            let row_height = ui.fonts()[TextStyle::Body].row_height();
-            let num_rows = search_result.len();
+            // let row_height = ui.fonts()[TextStyle::Body].row_height();
+            // let num_rows = search_result.len();
 
-            ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
-                if index.is_empty() {
-                    ui.label("Please wait...");
-                } else {
-                    for row in row_range {
-                        ui.label(search_result.get(row).unwrap());
-                    }
-                }
-            });
+            // ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
+            //     if index.is_empty() {
+            //         ui.label("Please wait...");
+            //     } else {
+            //         for row in row_range {
+            //             ui.label(search_result.get(row).unwrap());
+            //         }
+            //     }
+            // });
         });
     }
 }

@@ -12,14 +12,14 @@ use std::{
 
 use jwalk::WalkDir;
 use rayon::{
-    iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator},
+    iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator},
     str::ParallelString,
 };
 
 use crate::index::Index;
 
 pub struct Indexer {
-    index: Option<Vec<Index>>,
+    pub index: Option<Vec<Index>>,
 }
 
 impl Indexer {
@@ -35,12 +35,10 @@ impl Indexer {
     pub fn update(&mut self) {
         self.index = Indexer::read();
     }
-    pub fn create() {
-        let paths: Vec<&Path> = vec![Path::new(r"C:\"), Path::new(r"D:\")];
-        Indexer::scan_and_write(paths);
-    }
 
-    pub fn scan_and_write(drives: Vec<&Path>) {
+    pub fn create() {
+        //todo get drives from system
+        let drives: Vec<&Path> = vec![Path::new(r"C:\"), Path::new(r"D:\")];
         let now = Instant::now();
 
         let file = File::create("index.db").unwrap();
@@ -85,28 +83,14 @@ impl Indexer {
         let mut file = File::open("index.db").unwrap();
         let file_len = file.metadata().unwrap().len();
 
-        // old faster version
-        // let mut v: Vec<u8> = Vec::with_capacity(file_len as usize + 1);
-        // file.read_to_end(&mut v).unwrap();
-        // println!(
-        //     "Finished reading {} items, took: {:?}",
-        //     v.len(),
-        //     now.elapsed()
-        // );
-
-        //6-9 ms slower but uses string instead
         let mut s = String::with_capacity(file_len as usize);
         file.read_to_string(&mut s).unwrap();
 
-        let mut out = Vec::with_capacity(s.len() as usize + 1);
-
-        for index in s.split('\t') {
-            out.push(Index::new(index.to_string()));
-        }
+        let output = s.par_split('\t').map(|index| Index::new(index)).collect();
 
         println!("reading {} items took {:?}", s.len(), now.elapsed());
-        // return Some(out);
-        return Some(out);
+
+        return Some(output);
     }
 
     pub fn search(&self, query: &str) -> VecDeque<String> {

@@ -12,15 +12,15 @@ pub struct Index {
     pub file_size: u32,
 }
 impl Index {
-    pub fn new(slice: String) -> Self {
+    pub fn new(slice: &str) -> Self {
         Self {
-            path: Index::path(&slice),
-            file_name: Index::file_name(&slice),
+            path: Index::path(slice),
+            file_name: Index::file_name(slice),
             // file_size: Index::file_size(&slice),
             file_size: 0,
         }
     }
-    pub fn path(slice: &String) -> String {
+    pub fn path(slice: &str) -> String {
         let mut path = String::new();
         for c in slice.chars() {
             if c == '\n' {
@@ -32,7 +32,7 @@ impl Index {
 
         return path;
     }
-    pub fn file_name(slice: &String) -> String {
+    pub fn file_name(slice: &str) -> String {
         //todo did i break it?
         // if !Index::is_dir(&slice)
         let path = Index::path(&slice);
