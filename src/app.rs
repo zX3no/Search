@@ -1,19 +1,14 @@
+#![allow(unused_imports)]
 use std::collections::VecDeque;
-use std::convert::TryInto;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{self, channel, Receiver, SyncSender};
-use std::sync::{Arc, Mutex, RwLock};
-use std::thread::{self, JoinHandle};
+use std::sync::mpsc::Receiver;
+use std::thread::{self};
 use std::time::{Duration, Instant};
 
-use eframe::egui::{color::*, *};
+use eframe::egui::*;
 use eframe::{egui, epi};
 use jwalk::WalkDir;
-use rayon::iter::{
-    IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
-};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 pub struct App {
     //async drive scan
@@ -171,8 +166,11 @@ impl epi::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            //TODO make this bigger
-            ui.text_edit_singleline(search);
+            ui.add_sized(
+                //the height does not matter
+                Vec2::new(ui.available_width(), 0.0),
+                egui::TextEdit::singleline(search),
+            );
 
             egui::warn_if_debug_build(ui);
 
