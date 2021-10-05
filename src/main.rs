@@ -5,17 +5,14 @@ use eframe::NativeOptions;
 use crate::app::App;
 use crate::indexer::Indexer;
 mod app;
+mod index;
 mod indexer;
 
 fn main() {
     // Indexer::create();
-    // Indexer::read();
-    let index = Indexer::new();
-    index.search("among us");
+    let app = App::default();
+    eframe::run_native(Box::new(app), NativeOptions::default());
 
-    // let app = App::default();
-
-    // eframe::run_native(Box::new(app), NativeOptions::default());
     //Currently self.result cannot be shared across threads
     //this is bad because the memory needs to be copied
     //every time I want to do a search

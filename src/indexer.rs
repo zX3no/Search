@@ -2,7 +2,6 @@ use std::{
     collections::VecDeque,
     fs::File,
     io::{BufWriter, Read, Write},
-    os::windows::prelude::MetadataExt,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -10,14 +9,20 @@ use std::{
 use jwalk::WalkDir;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
+use crate::index::Index;
+
 pub struct Indexer {
     index: String,
 }
+
 impl Indexer {
     pub fn new() -> Self {
-        Self {
-            index: Indexer::read(),
+        if Indexer::database_exists() {
+            return Self {
+                index: Indexer::read(),
+            };
         }
+        panic!("no database");
     }
 
     pub fn create() {
@@ -32,13 +37,22 @@ impl Indexer {
         let mut writer = BufWriter::new(file);
 
         let newline: &[u8] = &['\n' as u8];
+        let end: &[u8] = &['\t' as u8];
 
         for drive in drives.iter() {
             for file in WalkDir::new(drive).sort(true).skip_hidden(false) {
                 if let Ok(f) = file {
-                    writer
-                        .write(&[f.path().to_string_lossy().as_bytes(), newline].concat())
-                        .unwrap();
+                    let out = &[
+                        f.path().to_string_lossy().as_bytes(),
+                        newline,
+                        &[f.file_type.is_dir() as u8],
+                        newline,
+                        &[0],
+                        end,
+                    ]
+                    .concat();
+
+                    writer.write_all(out).unwrap();
                 };
             }
         }
@@ -75,15 +89,21 @@ impl Indexer {
 
         return s;
     }
-    pub fn search(&self, query: &str) -> Vec<String> {
+
+    pub fn search(&self, query: &str) -> VecDeque<String> {
         let now = Instant::now();
 
-        let mut buffer = Vec::new();
-        for file in self.index.split("\n") {
-            if file.contains(query) {
-                buffer.push(file.to_string());
+        let mut buffer = VecDeque::new();
+        for index in self.index.split('\t') {
+            if let Some(file_name) = Index::file_name(&index.to_string()) {
+                buffer.push_back(file_name);
             }
         }
+        // for file in self.index.split("\n") {
+        //     if file.contains(query) {
+        //         buffer.push_back(file.to_string());
+        //     }
+        // }
 
         println!("searching took {:?}", now.elapsed());
 
