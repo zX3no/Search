@@ -35,26 +35,39 @@ impl Indexer {
         }
         println!("Finished indexing... {:?}", now.elapsed());
     }
+
     fn database_exists() -> bool {
         if Path::new("index.db").exists() {
             return true;
         }
         return false;
     }
-    pub fn read() -> Vec<u8> {
+
+    pub fn read() -> String {
         let now = Instant::now();
+
         let mut file = File::open("index.db").unwrap();
         let file_len = file.metadata().unwrap().len();
-        //prealoacte vector to avoid any resizes
-        let mut v: Vec<u8> = Vec::with_capacity(file_len as usize + 1);
-        file.read_to_end(&mut v).unwrap();
+
+        // old faster version
+        // let mut v: Vec<u8> = Vec::with_capacity(file_len as usize + 1);
+        // file.read_to_end(&mut v).unwrap();
+        // println!(
+        //     "Finished reading {} items, took: {:?}",
+        //     v.len(),
+        //     now.elapsed()
+        // );
+
+        //6-9 ms slower but uses string instead
+        let mut s = String::with_capacity(file_len as usize + 1);
+        file.read_to_string(&mut s).unwrap();
 
         println!(
             "Finished reading {} items, took: {:?}",
-            v.len(),
+            s.len(),
             now.elapsed()
         );
 
-        return v;
+        return s;
     }
 }

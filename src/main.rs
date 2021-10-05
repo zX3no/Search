@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
 use eframe::NativeOptions;
 
 use crate::app::App;
@@ -6,17 +8,8 @@ mod app;
 mod indexer;
 
 fn main() {
-    let buf = &[0x41u8, 0x41u8, 0x42u8];
-
-    let s = match std::str::from_utf8(buf) {
-        Ok(v) => v,
-        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-    };
-
-    println!("result: {}", s);
-
     // Indexer::create();
-    // Indexer::read();
+    Indexer::read();
 
     // let app = App::default();
 
