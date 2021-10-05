@@ -110,37 +110,22 @@ impl Indexer {
     }
 
     pub fn search(&self, query: &str) -> VecDeque<String> {
-        //WTF?
-        let buf: Arc<Mutex<Option<VecDeque<String>>>> = Arc::new(Mutex::new(Some(VecDeque::new())));
-
         let now = Instant::now();
-
-        //FOR SOME REASON IF THE QUERY IS 1 CHAR IT TAKES LONGER MULTITHREADED??? I GUESS WE'LL HAVE BOTH???
-        if query.len() < 2 {
-            if let Some(index) = &self.index {
-                for i in index {
-                    if i.file_name.contains(query) {
-                        if let Some(vec) = buf.lock().unwrap().as_mut() {
-                            vec.push_back(i.file_name.clone());
-                        }
-                    }
-                }
-            }
-        } else {
-            if let Some(index) = &self.index {
-                index.par_iter().for_each(|index| {
+        if let Some(index) = &self.index {
+            let output: VecDeque<String> = index
+                .par_iter()
+                .filter_map(|index| {
                     if index.file_name.contains(query) {
-                        if let Some(vec) = buf.lock().unwrap().as_mut() {
-                            vec.push_back(index.file_name.clone());
-                        }
+                        return Some(index.file_name.clone());
                     }
-                });
-            }
-        }
+                    None
+                })
+                .collect();
 
-        println!("searching took {:?}", now.elapsed());
-
-        let out = buf.lock().unwrap().take().unwrap();
-        return out;
+            println!("searching took {:?}", now.elapsed());
+            return output;
+        } else {
+            return VecDeque::new();
+        };
     }
 }
