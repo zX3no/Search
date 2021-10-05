@@ -7,6 +7,8 @@ use std::{thread, time::Duration};
 //File path \n is directory(bool) \n file size(u32) \r
 //file size is not finished
 
+//todo rename from index? wtf is an index? how about path?
+
 #[derive(Debug)]
 pub struct Index {
     pub path: String,

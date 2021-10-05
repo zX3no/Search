@@ -16,6 +16,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use crate::index::{self, Index};
 use crate::indexer::Indexer;
 
+//todo
 type MS = Arc<RwLock<String>>;
 
 pub struct App {
@@ -47,9 +48,7 @@ impl App {
         });
     }
 
-    fn search(&mut self, query: String) {
-        self.last_search = self.search_query.clone();
-
+    fn search(&self, query: String) {
         let search_result = self.search_result.clone();
         //oof chrome moment
         let indexer = self.indexer.clone();
@@ -108,7 +107,7 @@ impl epi::App for App {
                 let row_height = ui.fonts()[TextStyle::Body].row_height();
                 //todo remove this
                 let vec_queue: VecDeque<&Index> = VecDeque::from_iter(index);
-                let num_rows = vec_queue.len() + 1;
+                let num_rows = vec_queue.len();
 
                 //todo swap to search results
                 egui::Grid::new("heading").show(ui, |ui| {
@@ -134,6 +133,7 @@ impl epi::App for App {
 
         if search_query != last_search {
             let query = search_query.to_string();
+            self.last_search = query.clone();
             self.search(query);
         }
     }
