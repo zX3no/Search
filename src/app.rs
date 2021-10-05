@@ -5,6 +5,7 @@ use std::sync::mpsc::Receiver;
 use std::thread::{self};
 use std::time::{Duration, Instant};
 
+use eframe::egui::util::undoer::Settings;
 use eframe::egui::*;
 use eframe::{egui, epi};
 use jwalk::WalkDir;
@@ -174,8 +175,9 @@ impl epi::App for App {
 
             egui::warn_if_debug_build(ui);
 
-            ui.add_space(4.0);
+            ui.add_space(10.0);
 
+            ui.style_mut().spacing.scroll_bar_width = 13.0;
             let row_height = ui.fonts()[TextStyle::Body].row_height();
             let num_rows = search_result.len();
 
