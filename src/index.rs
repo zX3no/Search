@@ -5,6 +5,7 @@ use std::{thread, time::Duration};
 
 //Data layout:
 //File path \n is directory(bool) \n file size(u32) \r
+//file size is not finished
 pub struct Index {
     pub path: String,
     pub file_name: String,

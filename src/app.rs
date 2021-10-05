@@ -32,40 +32,7 @@ impl Default for App {
     }
 }
 
-impl App {
-    pub fn scan_drive() -> VecDeque<PathBuf> {
-        let mut out = VecDeque::new();
-        for file in WalkDir::new(Path::new(r"C:\"))
-            .sort(true)
-            .skip_hidden(false)
-        {
-            if let Ok(f) = file {
-                out.push_back(f.path())
-            };
-        }
-        for file in WalkDir::new(Path::new(r"D:\"))
-            .sort(true)
-            .skip_hidden(false)
-        {
-            if let Ok(f) = file {
-                out.push_back(f.path())
-            };
-        }
-        return out;
-    }
-    pub fn search_files(files: VecDeque<PathBuf>, s: String) -> VecDeque<PathBuf> {
-        let out: VecDeque<_> = files
-            .par_iter()
-            .filter_map(|f| {
-                if f.to_string_lossy().contains(&s) {
-                    return Some(f.clone());
-                }
-                return None;
-            })
-            .collect();
-        return out;
-    }
-}
+impl App {}
 impl epi::App for App {
     fn name(&self) -> &str {
         "Search!"

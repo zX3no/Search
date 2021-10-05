@@ -1,5 +1,9 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
+use std::thread;
+use std::time::Duration;
+
+use eframe::egui;
 use eframe::NativeOptions;
 
 use crate::app::App;
