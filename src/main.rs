@@ -9,7 +9,9 @@ mod indexer;
 
 fn main() {
     // Indexer::create();
-    Indexer::read();
+    // Indexer::read();
+    let index = Indexer::new();
+    index.search("among us");
 
     // let app = App::default();
 

@@ -8,15 +8,24 @@ use std::{
 };
 
 use jwalk::WalkDir;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
-pub struct Indexer {}
+pub struct Indexer {
+    index: String,
+}
 impl Indexer {
-    pub fn create() {
-        let paths: Vec<&Path> = vec![Path::new(r"C:\"), Path::new(r"D:\")];
-        Indexer::scan_drive(paths);
+    pub fn new() -> Self {
+        Self {
+            index: Indexer::read(),
+        }
     }
 
-    pub fn scan_drive(drives: Vec<&Path>) {
+    pub fn create() {
+        let paths: Vec<&Path> = vec![Path::new(r"C:\"), Path::new(r"D:\")];
+        Indexer::scan_and_write(paths);
+    }
+
+    pub fn scan_and_write(drives: Vec<&Path>) {
         let now = Instant::now();
 
         let file = File::create("index.db").unwrap();
@@ -33,7 +42,7 @@ impl Indexer {
                 };
             }
         }
-        println!("Finished indexing... {:?}", now.elapsed());
+        println!("indexing took {:?}", now.elapsed());
     }
 
     fn database_exists() -> bool {
@@ -62,12 +71,22 @@ impl Indexer {
         let mut s = String::with_capacity(file_len as usize + 1);
         file.read_to_string(&mut s).unwrap();
 
-        println!(
-            "Finished reading {} items, took: {:?}",
-            s.len(),
-            now.elapsed()
-        );
+        println!("reading {} items took {:?}", s.len(), now.elapsed());
 
         return s;
+    }
+    pub fn search(&self, query: &str) -> Vec<String> {
+        let now = Instant::now();
+
+        let mut buffer = Vec::new();
+        for file in self.index.split("\n") {
+            if file.contains(query) {
+                buffer.push(file.to_string());
+            }
+        }
+
+        println!("searching took {:?}", now.elapsed());
+
+        return buffer;
     }
 }

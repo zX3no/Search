@@ -11,6 +11,8 @@ use eframe::{egui, epi};
 use jwalk::WalkDir;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+use crate::indexer::Indexer;
+
 pub struct App {
     //async drive scan
     in_progress: Option<Receiver<VecDeque<PathBuf>>>,
@@ -23,6 +25,8 @@ pub struct App {
     search_result: VecDeque<PathBuf>,
     //benchmarks
     now: Instant,
+    //database
+    index: Indexer,
 }
 
 impl Default for App {
@@ -37,6 +41,7 @@ impl Default for App {
             last_search: String::from(" "),
             search_result: Default::default(),
             now: Instant::now(),
+            index: Indexer::new(),
         }
     }
 }
@@ -98,6 +103,7 @@ impl epi::App for App {
             last_search,
             search_result,
             now,
+            index,
         } = self;
         if let Some(receiver) = in_progress {
             // Are we there yet?
