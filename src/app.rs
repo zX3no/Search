@@ -127,6 +127,8 @@ impl epi::App for App {
                         }
                     });
                 });
+            } else {
+                ui.label("Loading...");
             }
         });
 
