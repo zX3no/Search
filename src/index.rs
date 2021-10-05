@@ -6,11 +6,23 @@ use std::{thread, time::Duration};
 //Data layout:
 //File path \n is directory(bool) \n file size(u32) \r
 //file size is not finished
+
+#[derive(Debug)]
 pub struct Index {
     pub path: String,
     pub file_name: String,
     pub file_size: u32,
 }
+impl Default for Index {
+    fn default() -> Self {
+        Self {
+            path: String::new(),
+            file_name: String::new(),
+            file_size: 0,
+        }
+    }
+}
+
 impl Index {
     pub fn new(slice: &str) -> Self {
         Self {
@@ -33,17 +45,13 @@ impl Index {
         return path;
     }
     pub fn file_name(slice: &str) -> String {
-        //todo did i break it?
-        // if !Index::is_dir(&slice)
         let path = Index::path(&slice);
 
         let mut name = String::new();
-        let mut backslash = 0;
 
         for c in path.chars().rev() {
             if c == '\\' {
                 break;
-                // dbg!(&c, &path);
             }
             name.push(c);
         }

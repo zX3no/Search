@@ -18,15 +18,19 @@ use rayon::{
 
 use crate::index::Index;
 
+#[derive(Debug)]
 pub struct Indexer {
     pub index: Option<Vec<Index>>,
+}
+impl Default for Indexer {
+    fn default() -> Self {
+        Self { index: None }
+    }
 }
 
 impl Indexer {
     pub fn new() -> Self {
-        return Self {
-            index: Indexer::read(),
-        };
+        return Self { index: None };
     }
 
     pub fn is_empty(&self) -> bool {
