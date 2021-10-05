@@ -2,29 +2,39 @@ use std::{
     collections::VecDeque,
     fs::File,
     io::{BufWriter, Read, Write},
+    ops::RangeBounds,
     path::{Path, PathBuf},
+    rc::Rc,
+    sync::{Arc, Mutex, RwLock},
+    thread,
     time::Instant,
 };
 
 use jwalk::WalkDir;
-use rayon::iter::{ParallelBridge, ParallelIterator};
+use rayon::{
+    iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator},
+    str::ParallelString,
+};
 
 use crate::index::Index;
 
 pub struct Indexer {
-    index: String,
+    index: Option<Vec<Index>>,
 }
 
 impl Indexer {
     pub fn new() -> Self {
-        if Indexer::database_exists() {
-            return Self {
-                index: Indexer::read(),
-            };
-        }
-        panic!("no database");
+        return Self {
+            index: Indexer::read(),
+        };
     }
 
+    pub fn is_empty(&self) -> bool {
+        return self.index.is_none();
+    }
+    pub fn update(&mut self) {
+        self.index = Indexer::read();
+    }
     pub fn create() {
         let paths: Vec<&Path> = vec![Path::new(r"C:\"), Path::new(r"D:\")];
         Indexer::scan_and_write(paths);
@@ -59,14 +69,17 @@ impl Indexer {
         println!("indexing took {:?}", now.elapsed());
     }
 
-    fn database_exists() -> bool {
+    pub fn database_exists() -> bool {
         if Path::new("index.db").exists() {
             return true;
         }
         return false;
     }
 
-    pub fn read() -> String {
+    pub fn read() -> Option<Vec<Index>> {
+        if !Indexer::database_exists() {
+            return None;
+        }
         let now = Instant::now();
 
         let mut file = File::open("index.db").unwrap();
@@ -82,31 +95,52 @@ impl Indexer {
         // );
 
         //6-9 ms slower but uses string instead
-        let mut s = String::with_capacity(file_len as usize + 1);
+        let mut s = String::with_capacity(file_len as usize);
         file.read_to_string(&mut s).unwrap();
 
-        println!("reading {} items took {:?}", s.len(), now.elapsed());
+        let mut out = Vec::with_capacity(s.len() as usize + 1);
 
-        return s;
+        for index in s.split('\t') {
+            out.push(Index::new(index.to_string()));
+        }
+
+        println!("reading {} items took {:?}", s.len(), now.elapsed());
+        // return Some(out);
+        return Some(out);
     }
 
     pub fn search(&self, query: &str) -> VecDeque<String> {
+        //WTF?
+        let buf: Arc<Mutex<Option<VecDeque<String>>>> = Arc::new(Mutex::new(Some(VecDeque::new())));
+
         let now = Instant::now();
 
-        let mut buffer = VecDeque::new();
-        for index in self.index.split('\t') {
-            if let Some(file_name) = Index::file_name(&index.to_string()) {
-                buffer.push_back(file_name);
+        //FOR SOME REASON IF THE QUERY IS 1 CHAR IT TAKES LONGER MULTITHREADED??? I GUESS WE'LL HAVE BOTH???
+        if query.len() < 2 {
+            if let Some(index) = &self.index {
+                for i in index {
+                    if i.file_name.contains(query) {
+                        if let Some(vec) = buf.lock().unwrap().as_mut() {
+                            vec.push_back(i.file_name.clone());
+                        }
+                    }
+                }
+            }
+        } else {
+            if let Some(index) = &self.index {
+                index.par_iter().for_each(|index| {
+                    if index.file_name.contains(query) {
+                        if let Some(vec) = buf.lock().unwrap().as_mut() {
+                            vec.push_back(index.file_name.clone());
+                        }
+                    }
+                });
             }
         }
-        // for file in self.index.split("\n") {
-        //     if file.contains(query) {
-        //         buffer.push_back(file.to_string());
-        //     }
-        // }
 
         println!("searching took {:?}", now.elapsed());
 
-        return buffer;
+        let out = buf.lock().unwrap().take().unwrap();
+        return out;
     }
 }

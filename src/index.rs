@@ -6,16 +6,17 @@ use std::{thread, time::Duration};
 //Data layout:
 //File path \n is directory(bool) \n file size(u32) \r
 pub struct Index {
-    path: String,
-    file_name: Option<String>,
-    file_size: u32,
+    pub path: String,
+    pub file_name: String,
+    pub file_size: u32,
 }
 impl Index {
     pub fn new(slice: String) -> Self {
         Self {
             path: Index::path(&slice),
             file_name: Index::file_name(&slice),
-            file_size: Index::file_size(&slice),
+            // file_size: Index::file_size(&slice),
+            file_size: 0,
         }
     }
     pub fn path(slice: &String) -> String {
@@ -30,26 +31,24 @@ impl Index {
 
         return path;
     }
-    pub fn file_name(slice: &String) -> Option<String> {
-        //todo this does not return folder names
-        if !Index::is_dir(&slice) {
-            let path = Index::path(&slice);
+    pub fn file_name(slice: &String) -> String {
+        //todo did i break it?
+        // if !Index::is_dir(&slice)
+        let path = Index::path(&slice);
 
-            let mut name = String::new();
-            let mut backslash = 0;
+        let mut name = String::new();
+        let mut backslash = 0;
 
-            for c in path.chars().rev() {
-                if c == '\\' {
-                    break;
-                    // dbg!(&c, &path);
-                }
-                name.push(c);
+        for c in path.chars().rev() {
+            if c == '\\' {
+                break;
+                // dbg!(&c, &path);
             }
-
-            let out = name.chars().rev().collect();
-            return Some(out);
+            name.push(c);
         }
-        return None;
+
+        let out = name.chars().rev().collect();
+        return out;
     }
     pub fn is_dir(slice: &String) -> bool {
         let mut newlines = 0;

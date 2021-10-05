@@ -77,6 +77,11 @@ impl epi::App for App {
         _frame: &mut epi::Frame<'_>,
         _storage: Option<&dyn epi::Storage>,
     ) {
+        if self.index.is_empty() {
+            thread::spawn(|| {
+                Indexer::create();
+            });
+        }
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
@@ -87,11 +92,15 @@ impl epi::App for App {
             index,
         } = self;
 
-        if search_query != last_search {
+        if search_query != last_search && !index.is_empty() {
             //update the last search
             *last_search = search_query.clone();
 
             *search_result = index.search(search_query);
+        }
+
+        if index.is_empty() {
+            // index.update();
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -121,12 +130,12 @@ impl epi::App for App {
             let num_rows = search_result.len();
 
             ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
-                // if result.is_none() {
-                //     ui.label("Please wait...");
-                // }
-
-                for row in row_range {
-                    ui.label(search_result.get(row).unwrap());
+                if index.is_empty() {
+                    ui.label("Please wait...");
+                } else {
+                    for row in row_range {
+                        ui.label(search_result.get(row).unwrap());
+                    }
                 }
             });
         });
