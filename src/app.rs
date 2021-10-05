@@ -177,7 +177,8 @@ impl epi::App for App {
 
             ui.add_space(10.0);
 
-            ui.style_mut().spacing.scroll_bar_width = 13.0;
+            //broken
+            // ui.style_mut().spacing.scroll_bar_width = 13.0;
             let row_height = ui.fonts()[TextStyle::Body].row_height();
             let num_rows = search_result.len();
 
