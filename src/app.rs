@@ -2,6 +2,7 @@
 use std::collections::VecDeque;
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread::{self};
@@ -103,10 +104,9 @@ impl epi::App for App {
 
             ui.add_space(4.0);
 
-            egui::Grid::new("heading").show(ui, |ui| {
-                ui.heading("Name");
-                ui.heading("Path");
-                ui.end_row();
+            ui.columns(2, |columns| {
+                columns[0].label("Name");
+                columns[1].label("Path");
             });
 
             ui.add_space(4.0);
@@ -116,14 +116,19 @@ impl epi::App for App {
 
             ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
                 let file = search_result.read().unwrap();
-                egui::Grid::new("files").show(ui, |ui| {
-                    for row in row_range {
-                        let file = file.get(row).unwrap();
-                        ui.label(file.file_name.clone());
-                        ui.label(file.path.clone());
-                        ui.end_row();
-                    }
-                });
+                for row in row_range {
+                    let file = file.get(row).unwrap();
+                    ui.columns(2, |columns| {
+                        //todo line wrapping does not work
+                        //text does not stay in it's column
+                        if columns[0].button(file.file_name.clone()).clicked() {
+                            Command::new("explorer").arg(&file.path).spawn().unwrap();
+                        };
+                        if columns[1].button(file.path.clone()).clicked() {
+                            Command::new("explorer").arg(&file.path).spawn().unwrap();
+                        };
+                    });
+                }
             });
         });
 

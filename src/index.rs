@@ -9,6 +9,8 @@ use std::{thread, time::Duration};
 
 //todo rename from index? wtf is an index? how about path?
 
+//TODO PATH AND FILES ARE BROKEN
+
 #[derive(Debug, Clone)]
 pub struct Index {
     pub path: String,
@@ -33,6 +35,9 @@ impl Index {
             // file_size: Index::file_size(&slice),
             file_size: 0,
         }
+    }
+    pub fn dir(&self) {
+        todo!("strip file name out of path");
     }
     pub fn path(slice: &str) -> String {
         let mut path = String::new();
