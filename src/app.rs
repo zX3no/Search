@@ -22,7 +22,7 @@ type MS = Arc<RwLock<String>>;
 pub struct App {
     search_query: String,
     last_search: String,
-    search_result: Arc<RwLock<VecDeque<String>>>,
+    search_result: Arc<RwLock<VecDeque<Index>>>,
     indexer: Arc<RwLock<Indexer>>,
 }
 
@@ -103,32 +103,28 @@ impl epi::App for App {
 
             ui.add_space(4.0);
 
-            if let Some(index) = &indexer.read().unwrap().index {
-                let row_height = ui.fonts()[TextStyle::Body].row_height();
-                //todo remove this
-                let vec_queue: VecDeque<&Index> = VecDeque::from_iter(index);
-                let num_rows = vec_queue.len();
+            egui::Grid::new("heading").show(ui, |ui| {
+                ui.heading("Name");
+                ui.heading("Path");
+                ui.end_row();
+            });
 
-                //todo swap to search results
-                egui::Grid::new("heading").show(ui, |ui| {
-                    ui.heading("Name");
-                    ui.heading("Path");
-                    ui.end_row();
+            ui.add_space(4.0);
+
+            let row_height = ui.fonts()[TextStyle::Body].row_height();
+            let num_rows = search_result.read().unwrap().len();
+
+            ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
+                let file = search_result.read().unwrap();
+                egui::Grid::new("files").show(ui, |ui| {
+                    for row in row_range {
+                        let file = file.get(row).unwrap();
+                        ui.label(file.file_name.clone());
+                        ui.label(file.path.clone());
+                        ui.end_row();
+                    }
                 });
-                ui.add_space(4.0);
-                ScrollArea::auto_sized().show_rows(ui, row_height, num_rows, |ui, row_range| {
-                    egui::Grid::new("files").show(ui, |ui| {
-                        for row in row_range {
-                            let file = vec_queue.get(row).unwrap();
-                            ui.label(file.file_name.clone());
-                            ui.label(file.path.clone());
-                            ui.end_row();
-                        }
-                    });
-                });
-            } else {
-                ui.label("Loading...");
-            }
+            });
         });
 
         if search_query != last_search {

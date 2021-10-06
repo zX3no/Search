@@ -97,14 +97,14 @@ impl Indexer {
         return Some(output);
     }
 
-    pub fn search(&self, query: &str) -> VecDeque<String> {
+    pub fn search(&self, query: &str) -> VecDeque<Index> {
         let now = Instant::now();
         if let Some(index) = &self.index {
-            let output: VecDeque<String> = index
+            let output: VecDeque<Index> = index
                 .par_iter()
                 .filter_map(|index| {
                     if index.file_name.contains(query) {
-                        return Some(index.file_name.clone());
+                        return Some(index.clone());
                     }
                     None
                 })

@@ -9,7 +9,7 @@ use std::{thread, time::Duration};
 
 //todo rename from index? wtf is an index? how about path?
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Index {
     pub path: String,
     pub file_name: String,
