@@ -133,7 +133,7 @@ impl epi::App for App {
         });
 
         if search_query != last_search {
-            let query = search_query.to_string();
+            let query = search_query.to_string().to_lowercase();
             self.last_search = query.clone();
             self.search(query);
         }

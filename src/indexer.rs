@@ -103,7 +103,8 @@ impl Indexer {
             let output: VecDeque<Index> = index
                 .par_iter()
                 .filter_map(|index| {
-                    if index.file_name.contains(query) {
+                    //todo change search type
+                    if index.file_name.to_lowercase().contains(&query) {
                         return Some(index.clone());
                     }
                     None
