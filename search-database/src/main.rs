@@ -1,3 +1,5 @@
+use search_database::database::Database;
+
 fn main() {
-    println!("Hello, world!");
+    Database::test();
 }

@@ -3,7 +3,6 @@
 members = [
     "search-ui",
     "search-database",
-    "search-indexer",
     "search-watcher"
 ]
 

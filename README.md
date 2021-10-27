@@ -26,6 +26,7 @@ UI <--> DATABASE <--> INDEXER
 - Indexer
 
     Writes database to file.
+    Why have indexer and database?
 
 - Watcher
 
