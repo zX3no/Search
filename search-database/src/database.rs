@@ -1,16 +1,29 @@
 use std::{
+    fs::File,
+    io::BufReader,
     path::{Path, PathBuf},
     str::from_utf8,
+    time::Instant,
 };
 
+use bytecodec::{
+    io::{IoDecodeExt, IoEncodeExt},
+    null::{NullDecoder, NullEncoder},
+    Encode,
+};
 use filesize::PathExt;
 use jwalk::WalkDir;
-use patricia_tree::PatriciaSet;
+use patricia_tree::{
+    node::{NodeDecoder, NodeEncoder},
+    PatriciaSet,
+};
 use sysinfo::{DiskExt, System, SystemExt};
 
-pub struct Database {}
+pub struct Database {
+    set: PatriciaSet,
+}
 impl Database {
-    pub fn test() {
+    pub fn test() -> PatriciaSet {
         //get all the drives
         let drives = vec![Path::new("D:\\")];
 
@@ -53,8 +66,10 @@ impl Database {
             let _str = from_utf8(&string).unwrap();
             // dbg!(_str);
         }
+
+        set
     }
-    pub fn create() -> PatriciaSet {
+    pub fn create() -> Self {
         let mut sys = System::new_all();
         sys.refresh_all();
         let drives: Vec<&Path> = sys.disks().iter().map(|disk| disk.mount_point()).collect();
@@ -72,7 +87,44 @@ impl Database {
         for path in paths {
             set.insert(path.to_str().unwrap());
         }
+        let file = File::create("files.db").unwrap();
 
-        set
+        let mut encoder = NodeEncoder::new(NullEncoder);
+        encoder.start_encoding(set.into()).unwrap();
+        encoder.encode_all(file).unwrap();
+
+        Database::read()
+    }
+    //~1s
+    //this is way to slow
+    pub fn read() -> Self {
+        let now = Instant::now();
+
+        let file = File::open("files.db").unwrap();
+        let reader = BufReader::new(file);
+
+        let mut decoder = NodeDecoder::new(NullDecoder);
+        let node = decoder.decode_exact(reader).unwrap();
+
+        let set = PatriciaSet::from(node);
+
+        println!("reading: {:?}", now.elapsed());
+
+        Self { set }
+    }
+    //this shouldn't be this slow
+    pub fn fzf(&self, query: &str) -> Vec<String> {
+        let keys = self.set.iter().collect::<Vec<_>>();
+        let mut out = Vec::new();
+
+        for item in keys {
+            if let Ok(str) = std::str::from_utf8(&item) {
+                if str.contains(query) {
+                    out.push(str.to_string());
+                }
+            }
+        }
+
+        out
     }
 }

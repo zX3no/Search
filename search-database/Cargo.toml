@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytecodec = "0.4.15"
 filesize = "0.2.0"
 jwalk = "0.6.0"
-patricia_tree = "0.3.1"
+patricia_tree = {version = "*", features = ["binary-format"]}
 sysinfo = "0.20.5"

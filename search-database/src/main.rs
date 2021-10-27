@@ -1,5 +1,6 @@
 use search_database::database::Database;
 
 fn main() {
-    Database::test();
+    let _ = Database::read();
+    // let _ = Database::create();
 }

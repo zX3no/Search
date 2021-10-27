@@ -14,14 +14,12 @@ UI <--> DATABASE <--> INDEXER
 
 - Database
     - Radix Tree
-        - Paths
-    - File Name
-    - Metadata
-        - File size
-        - Last changed
-        - Is directory
     
     A wrapper around the database for threading reasons?
+    I don't really want to hold the metadata since it's slow to get,
+    maybe the UI can just ask for it?
+    It's not like I'm showing all the items at once.
+    How would you order by filesize then?
 - Watcher
 
     https://github.com/notify-rs/notify
