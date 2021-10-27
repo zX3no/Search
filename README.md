@@ -22,12 +22,6 @@ UI <--> DATABASE <--> INDEXER
         - Is directory
     
     A wrapper around the database for threading reasons?
-
-- Indexer
-
-    Writes database to file.
-    Why have indexer and database?
-
 - Watcher
 
     https://github.com/notify-rs/notify

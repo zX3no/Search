@@ -1,14 +1,11 @@
 use std::{
-    ffi::OsString,
     path::{Path, PathBuf},
     str::from_utf8,
-    sync::{Arc, RwLock},
-    time::Instant,
 };
 
 use filesize::PathExt;
 use jwalk::WalkDir;
-use patricia_tree::{PatriciaMap, PatriciaSet};
+use patricia_tree::PatriciaSet;
 use sysinfo::{DiskExt, System, SystemExt};
 
 pub struct Database {}
@@ -53,8 +50,8 @@ impl Database {
         //print all paths as string
         let split: Vec<_> = set.split_by_prefix("D:\\Git\\search!").iter().collect();
         for string in split {
-            let str = from_utf8(&string).unwrap();
-            // dbg!(str);
+            let _str = from_utf8(&string).unwrap();
+            // dbg!(_str);
         }
     }
     pub fn create() -> PatriciaSet {
