@@ -1,18 +1,11 @@
-[package]
-name = "search"
-version = "0.1.0"
-edition = "2018"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+members = [
+    "search-ui",
+    "search-database",
+    "search-indexer",
+    "search-watcher"
+]
 
-[dependencies]
-jwalk = "0.6.0"
-memmap2 = "0.5.0"
-text_io = "0.1.9"
-eframe = "0.14.0"
-serde = { version = "1", features = ["derive"], optional = true }
-fuzzy-matcher = "0.3.7"
-rayon = "1.5.1"
+exclude = ["serach-old"]
 
-[features]
-multi_threaded = []
