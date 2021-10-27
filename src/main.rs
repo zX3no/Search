@@ -13,7 +13,7 @@ mod index;
 mod indexer;
 
 fn main() {
-    // Indexer::create();
+    Indexer::create();
     let app = App::default();
     eframe::run_native(Box::new(app), NativeOptions::default());
 
