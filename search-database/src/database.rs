@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::BufReader,
+    io::{BufReader, BufWriter, Write},
     path::{Path, PathBuf},
     str::from_utf8,
     time::Instant,
@@ -23,7 +23,34 @@ pub struct Database {
     set: PatriciaSet,
 }
 impl Database {
-    pub fn test() -> PatriciaSet {
+    pub fn test() {
+        let now = Instant::now();
+
+        let drives = vec![Path::new("C:\\")];
+
+        let file = File::create("index.db").unwrap();
+        let mut writer = BufWriter::new(&file);
+
+        //get all the files in the drives
+
+        let mut set = PatriciaSet::new();
+        for drive in drives {
+            for file in WalkDir::new(drive).sort(false).skip_hidden(false) {
+                set.insert(file.as_ref().unwrap().path().to_str().unwrap());
+            }
+        }
+        let out: Vec<_> = set.iter().collect();
+
+        for vec in out {
+            writer.write_all(&vec).unwrap();
+        }
+
+        //this don't work
+        let reader = BufReader::new(&file);
+
+        println!("{:?}", now.elapsed());
+    }
+    pub fn test1() -> PatriciaSet {
         //get all the drives
         let drives = vec![Path::new("D:\\")];
 

@@ -1,5 +1,5 @@
 use eframe::egui::*;
-use eframe::{egui, epi};
+use eframe::epi;
 
 mod table;
 use table::Table;
