@@ -10,4 +10,6 @@ bytecodec = "0.4.15"
 filesize = "0.2.0"
 jwalk = "0.6.0"
 patricia_tree = {version = "*", features = ["binary-format"]}
+rayon = "1.5.1"
 sysinfo = "0.20.5"
+winapi = "0.3.9"

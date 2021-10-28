@@ -1,7 +1,11 @@
 use std::{
+    ffi::c_void,
     fs::File,
     io::{BufReader, BufWriter, Write},
+    mem,
+    os::windows::prelude::{AsRawHandle, RawHandle},
     path::{Path, PathBuf},
+    ptr,
     str::from_utf8,
     time::Instant,
 };
@@ -17,13 +21,83 @@ use patricia_tree::{
     node::{NodeDecoder, NodeEncoder},
     PatriciaSet,
 };
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use sysinfo::{DiskExt, System, SystemExt};
-
+use winapi::{
+    shared::minwindef::{FILETIME, LPVOID},
+    um::{
+        fileapi::{
+            GetFileAttributesExA, GetFileAttributesExW, GetFileInformationByHandle,
+            BY_HANDLE_FILE_INFORMATION, WIN32_FILE_ATTRIBUTE_DATA,
+        },
+        minwinbase::GetFileExInfoStandard,
+    },
+};
+fn wide_null(s: &str) -> Vec<u16> {
+    s.encode_utf16().chain(Some(0)).collect()
+}
 pub struct Database {
     set: PatriciaSet,
 }
 impl Database {
+    pub fn para_metadata() {
+        let now = Instant::now();
+
+        let mut paths = Vec::new();
+
+        for file in WalkDir::new("D:\\").sort(false).skip_hidden(false) {
+            paths.push(file.unwrap().path());
+        }
+
+        println!("{:?}", now.elapsed());
+        let now = Instant::now();
+
+        //TODO: I feel like it may be possible to speed this up
+
+        let metadata: Vec<_> = paths
+            .par_iter()
+            .map(|path| {
+                let x = std::fs::metadata(path);
+                x
+            })
+            .collect();
+
+        dbg!(metadata.len(), paths.len());
+
+        println!("{:?}", now.elapsed());
+    }
     pub fn test() {
+        let now = Instant::now();
+        let file = File::open("index.db").unwrap();
+        println!("{:?}", now.elapsed());
+
+        let ft = FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        };
+        let mut info = WIN32_FILE_ATTRIBUTE_DATA {
+            dwFileAttributes: 0,
+            ftCreationTime: ft,
+            ftLastAccessTime: ft,
+            ftLastWriteTime: ft,
+            nFileSizeHigh: 0,
+            nFileSizeLow: 0,
+        };
+
+        let now = Instant::now();
+        unsafe {
+            // let mut info: BY_HANDLE_FILE_INFORMATION = mem::zeroed();
+            // GetFileInformationByHandle(file.as_raw_handle(), &mut info);
+            // let finfo: LPVOID;
+
+            // let finfo = &mut info as *mut _ as *mut c_void;
+
+            // GetFileAttributesExW(wide_null("in").as_ptr(), GetFileExInfoStandard, finfo);
+            // dbg!(test);
+        }
+        println!("{:?}", now.elapsed());
+    }
+    pub fn test2() {
         let now = Instant::now();
 
         let drives = vec![Path::new("C:\\")];
@@ -37,6 +111,10 @@ impl Database {
         for drive in drives {
             for file in WalkDir::new(drive).sort(false).skip_hidden(false) {
                 set.insert(file.as_ref().unwrap().path().to_str().unwrap());
+
+                let now = Instant::now();
+                let _ = file.unwrap().metadata();
+                println!("{:?}", now.elapsed());
             }
         }
         let out: Vec<_> = set.iter().collect();
@@ -44,9 +122,6 @@ impl Database {
         for vec in out {
             writer.write_all(&vec).unwrap();
         }
-
-        //this don't work
-        let reader = BufReader::new(&file);
 
         println!("{:?}", now.elapsed());
     }

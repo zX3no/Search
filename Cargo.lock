@@ -1295,7 +1295,9 @@ dependencies = [
  "filesize",
  "jwalk",
  "patricia_tree",
+ "rayon",
  "sysinfo",
+ "winapi",
 ]
 
 [[package]]
